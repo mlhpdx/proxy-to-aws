@@ -1,0 +1,104 @@
+version: 0.2 
+ 
+# builds libraries, nugets, apps and deployment packages.
+ 
+env:
+  shell: bash
+  secrets-manager: 
+    GITHUB_USER_NAME: GITHUB_PACKAGES:USER_NAME 
+    GITHUB_PASSWORD: GITHUB_PACKAGES:PASSWORD
+    GITHUB_ACCOUNT: GITHUB_PACKAGES:ACCOUNT
+    SONAR_TOKEN: SONAR:TOKEN
+
+phases: 
+  install: 
+    runtime-versions:
+      dotnet: 3.1
+    commands: 
+      # Upgrade AWS CLI to the latest version 
+      - pip install --upgrade awscli 
+      - pip install cfn_flip
+      - npm install -g semver
+      - add-apt-repository universe
+      - apt-get update
+      - apt-get install nuget -y
+      - apt-get install jq -y
+      - mozroots --import --sync
+      - nuget sources Add -Name github -Source https://nuget.pkg.github.com/$GITHUB_ACCOUNT/index.json -Username $GITHUB_USER_NAME -Password $GITHUB_PASSWORD
+      - dotnet tool install --global dotnet-sonarscanner
+
+  pre_build: 
+    commands: 
+      - case $CODEBUILD_WEBHOOK_HEAD_REF in refs/tags/* ) export version=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed -E 's/refs\/tags\/(.+)/\1/') && export qualifier=release;; * ) export version=$(semver -i $(git describe --tags --abbrev=0 --always)) && export qualifier=build;; esac
+      - version=${version:-0.0.0}
+      - export specifier=$(case $qualifier in "build") echo "$version-$qualifier.$CODEBUILD_BUILD_NUMBER" ;; "release") echo "$version" ;; "*") echo "$version-$qualifier" ;; esac)
+      - export project=${PWD##*/}
+      - echo '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><clear /><add key="github" value="https://nuget.pkg.github.com/'$GITHUB_ACCOUNT'/index.json" /><add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" /></packageSources><packageSourceCredentials><github><add key="Username" value="'$GITHUB_USER_NAME'" /><add key="ClearTextPassword" value="'$GITHUB_PASSWORD'" /></github></packageSourceCredentials></configuration>' > nuget.config
+      - more nuget.config
+      - env
+       
+  build: 
+    commands:
+      - codebuild-breakpoint
+      - nuget sources -Format detailed
+
+      - echo "Restoring..."
+      - dotnet restore
+
+      - echo "Building..."
+      - dotnet build -c Release
+
+      - dotnet sonarscanner begin /o:$GITHUB_ACCOUNT /k:${GITHUB_ACCOUNT}_$project /v:$specifier /n:$project /d:sonar.host.url=https://sonarcloud.io  /d:sonar.login=$SONAR_TOKEN /d:sonar.cs.opencover.reportsPaths="./coverage.opencover.xml" /d:sonar.coverage.exclusions="**Tests*.cs,**/DataAndWork.cs"
+
+      - echo "Testing..."
+      - dotnet test -c Release /p:CollectCoverage=true /p:CoverletOutputFormat=opencover /p:CoverletOutput="../coverage.opencover.xml"
+
+      - dotnet sonarscanner end /d:sonar.login=$SONAR_TOKEN
+
+      - echo "Packaging Nuget Packges"        
+      - for i in $(find . -name "*.csproj" -type f -exec grep -l "<PackageId>" {} \;); do j=$(dirname $i | sed 's,^\(.*/\)\?\([^/]*\),\2,') && echo "Packaging $j" && dotnet pack -c Release /p:Version=$specifier -o ./nupkg "$i"; done
+
+      - echo "Building and Packaging Lambdas"
+      - for i in $(find . -name "*.csproj" -type f -exec grep -l "AWSProjectType>Lambda<" {} \;); do j=$(dirname $i | sed 's,^\(.*/\)\?\([^/]*\),\2,') && echo "Publishing $j" && dotnet publish -o ./publish/$j-$specifier-linux-x64 -c Release -r linux-x64 "$i"; done || exit 1
+
+      - echo "Zipping Lambda Packages"
+      - if [ -d ./publish ] && [ $(find ./publish -maxdepth 1 -type d | wc -l) -gt 1 ]; then for i in $(find ./publish/* -maxdepth 1 -type d); do zip -q -r -j "${i%/}.zip" "$i"; done; fi || exit 1
+
+      - echo "Building Apps"
+      - for i in $(find . -name "*.csproj" -type f -exec grep -l "OutputType>Exe<" {} \;); do j=$(dirname $i | sed 's,^\(.*/\)\?\([^/]*\),\2,') && echo "Publishing $j" && dotnet publish -o ../apps/$j-$specifier-win10-x64 -c Release -r win10-x64 "$i"; done || exit 1
+      - for i in $(find . -name "*.csproj" -type f -exec grep -l "OutputType>Exe<" {} \;); do j=$(dirname $i | sed 's,^\(.*/\)\?\([^/]*\),\2,') && echo "Publishing $j" && dotnet publish -o ../apps/$j-$specifier-linux-x64 -c Release -r linux-x64 "$i"; done || exit 1
+
+      - echo "Zipping Apps"
+      - if [ -d ./apps ] && [ $(find ./apps -maxdepth 1 -type d | wc -l) -gt 1 ]; then for i in $(find ./apps/* -maxdepth 1 -type d); do zip -q -r "${i%/}.zip" "$i"; done; fi || exit 1
+
+      - echo "Transforming Template"
+      - if [ -f template.yaml ]; then echo "Creating serverless.template from template.yaml" && cfn-flip --json template.yaml serverless.template; fi
+      - mkdir -p ./template
+      - if [ -f serverless.template ] && [ -f state-machine.json ]; then echo "Pasting state-machine.json into serverless.template" && jq --slurpfile statemachine state-machine.json '.Resources.StateMachine.Properties.DefinitionString."Fn::Sub"=($statemachine[0]|@text)' < serverless.template > ./template/serverless.tmp; elif [ -f serverless.template ]; then cp serverless.template ./template/serverless.tmp; fi || exit 1
+      - if [ -f serverless.template ]; then for i in $(find . -name "*.csproj" -type f -exec grep -l "AWSProjectType>Lambda<" {} \;); do j=$(dirname $i | sed 's,^\(.*/\)\?\([^/]*\),\2,') && echo "Substitution for $j" && jq ".Resources.$j.Properties.CodeUri={ \"Bucket\":{ \"Fn::Sub\":\"cppl.deploy-\${AWS::Region}\" }, \"Key\":{ \"Fn::Sub\":\"build/${project}/publish/${j}-${specifier}-linux-x64.zip\" } }" ./template/serverless.tmp > ./template/template-$j.tmp; done; fi || exit 1
+      - if [ -f serverless.template ]; then jq -s . ./template/template-*.tmp | jq 'reduce .[] as $line ({}; . * $line)' > ./template/${project}-${specifier}.template; fi || exit 1
+      
+      - echo "Pushing new Package versions"
+      - for i in $(find ./nupkg/*.nupkg -type f); do nuget push -Source github "$i"; done
+
+      - echo "Packaging Apps for CodeDeploy"
+      - mkdir -p codedeploy
+      - ln -s ./apps/ProxyApp-$specifier-linux-x64 source && zip -q -r "./codedeploy/ProxyApp-$specifier-linux-x64.zip" source && rm source
+      - cd Deploy && zip -q -r "../codedeploy/ProxyApp-$specifier-linux-x64.zip" . && cd ..
+      - ls ./codedeploy/*.zip
+
+      - echo "Adding app to github release"
+      - if [ $qualifier = "release" ] ; then
+        release=$(curl -v -u $GITHUB_USER_NAME:$GITHUB_PASSWORD https://api.github.com/repos/$GITHUB_ACCOUNT/$project/releases/tags/$specifier | jq -r .id) && 
+        curl -v -sSL -X POST -u $GITHUB_USER_NAME:$GITHUB_PASSWORD 
+        --upload-file "./codedeploy/ProxyApp-$specifier-linux-x64.zip" 
+        --header "Content-Type:application/zip" --write-out "%{http_code}" --output $(mktemp) 
+        "https://uploads.github.com/repos/$GITHUB_ACCOUNT/$project/releases/$release/assets?name=ProxyApp-$specifier-linux-x64.zip" 
+        ; fi || exit 1
+
+artifacts: 
+  files: 
+    - ./nupkg/*.nupkg
+    - ./publish/*.zip
+    - ./apps/*.zip
+    - ./template/*.template

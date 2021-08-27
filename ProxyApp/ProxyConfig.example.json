@@ -1,0 +1,41 @@
+{
+  "Headless": true,
+  "Admin": {
+    "Monitor": "arn:aws:sns:us-west-2:123456789123:proxy-monitor"
+  },
+  "Destinations": {
+    "SyslogFirehose": {
+      "DeliveryArn": "arn:aws:firehose:us-west-2:123456789123:deliverystream/my-stream",
+      "Batching": {
+        "Count": 1000,
+        "SizeInMB": 1.0,
+        "TimeoutInSeconds": 10.0
+      }
+    },
+    "Lambda": {
+      "DeliveryArn": "arn:aws:lambda:us-west-2:123456789123:function:my-function",
+      "Batching": {
+        "Count": 10,
+        "SizeInMB": 0.25,
+        "TimeoutInSeconds": 0.2
+      }
+    }
+  },
+  "Bindings": [
+    {
+      "Description": "Listen for syslog messages on port 514 and forward to Firehose",
+      "IPAddress": "0.0.0.0",
+      "Protocols": "udp",
+      "Ports": "514",
+      "Destination": "SyslogFirehose"
+    },
+    {
+      "Description": "Listen for UDP and variable-length TCP messages on port 1812 and proxy (bi-directional) to Lambda",
+      "IPAddress": "0.0.0.0",
+      "Protocols": [ "udp", "tcp" ],
+      "Ports": "1812",
+      "StreamSplitter": "variable:2,2,true",
+      "Destination": "Lambda"
+    }
+  ]
+}

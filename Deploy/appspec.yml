@@ -1,0 +1,18 @@
+version: 0.0
+os: linux
+files:
+  - source: /source
+    destination: /var/paws
+  - source: /config/paws.service
+    destination: /etc/systemd/system
+hooks:
+  ApplicationStop:
+    - location: /application-stop.sh
+  BeforeInstall:
+    - location: /before-install.sh
+      timeout: 20
+  AfterInstall:
+    - location: /after-install.sh
+      timeout: 20
+  ApplicationStart:
+    - location: /application-start.sh

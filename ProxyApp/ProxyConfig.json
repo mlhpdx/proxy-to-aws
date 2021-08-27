@@ -1,0 +1,8 @@
+{
+  "Headless":  true,
+  "Admin": { },
+  "Destinations": {
+  },
+  "Bindings": [
+  ]
+}

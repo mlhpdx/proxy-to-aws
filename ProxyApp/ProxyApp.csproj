@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <ApplicationIcon>../Logos/PAWS.ico</ApplicationIcon>
+    <Authors>Lee Harding</Authors>
+    <Product>Proxy to Amazon Web Services</Product>
+    <Description>This application forwards network messages to AWS resources. It supports UDP, TCP, SSL and ICMP protocols as well as AWS Lambda, Firehose, SNS, SQS, S3 and StepFunctions destinations.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="ProxyConfig.example.json" />
+    <None Remove="ProxyConfig.example.tls.json" />
+    <None Remove="ProxyConfig.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="ProxyConfig.example.tls.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProxyConfig.example.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="ProxyConfig.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.Core" Version="3.7.0.34" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+    <PackageReference Include="Terminal.Gui" Version="1.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ProxyLib\ProxyLib.csproj" />
+  </ItemGroup>
+
+</Project>
