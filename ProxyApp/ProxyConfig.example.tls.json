@@ -1,0 +1,29 @@
+{
+  "Destinations": {
+    "SyslogFirehose": {
+      "DeliveryArn": "arn:aws:firehose:us-west-2:123456789123:deliverystream/my-stream"
+    },
+    "RadiusLambda": {
+      "DeliveryArn": "arn:aws:lambda:us-west-2:123456789123:function:my-function"
+    }
+  },
+  "Bindings": [
+    {
+      "Description": "Listen for messages over TLS on port 2083 and proxy to Lambda",
+      "IPAddress": "0.0.0.0",
+      "Protocols": "tls",
+      "Ports": "2083",
+      "TLSServerCertificate": "localhost",
+      "Clients": {
+        "AllowedNetworks": [ "192.168.1.0/24", "10.12.0.0/16", "10.11.0.0/16" ],
+        "AllowedDomains": [ "_cpf1.clients.domain.tld" ],
+        "TLSClientCertificates": [
+          "test.clients.domain.tld",
+          "~soft-test.clients.domain.tld",
+          "!hard-test.clients.domain.tld"
+        ]
+      },
+      "Destination": "RadiusLambda"
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "UdpProxy": {
+      "commandName": "Project",
+      "commandLineArgs": "ProxyConfig.json"
+    }
+  }
+}

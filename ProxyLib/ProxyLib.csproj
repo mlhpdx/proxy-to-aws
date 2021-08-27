@@ -1,0 +1,35 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Authors>Lee Harding</Authors>
+    <Product>Proxy to Amazon Web Services Library</Product>
+    <Description>This library provides a high-performance proxy implementation with the sole purpose of forwarding network message streams to AWS resources.  Support for UDP, TCP and SSL source streams is included, as are AWS Lambda, Firehose, SNS, SQS, S3 and StepFunctions destinations.  If you want to proxy to non-AWS destinations, this may not be the tool for you.</Description>
+    <PackageId>PAWSLib</PackageId>
+    <ApplicationIcon>PAWS.ico</ApplicationIcon>
+    <PackageProjectUrl>https://github.com/mlhpdx/PAWS</PackageProjectUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/mlhpdx/PAWS.git</RepositoryUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.Core" Version="3.7.0.34" />
+    <PackageReference Include="AWSSDK.KinesisFirehose" Version="3.7.0.32" />
+    <PackageReference Include="AWSSDK.Lambda" Version="3.7.0.32" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.1.4" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.21" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.2.3" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.0.33" />
+    <PackageReference Include="AWSSDK.StepFunctions" Version="3.7.0.32" />
+    <PackageReference Include="ClientPolicyLib" Version="1.0.1-build.1568409103-0cf966144" />
+    <PackageReference Include="DnsClient" Version="1.4.0" />
+    <PackageReference Include="IPNetwork2" Version="2.5.320" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Admin\Control\" />
+  </ItemGroup>
+
+</Project>
