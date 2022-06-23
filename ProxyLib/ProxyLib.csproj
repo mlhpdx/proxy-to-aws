@@ -14,14 +14,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="3.7.0.34" />
-    <PackageReference Include="AWSSDK.KinesisFirehose" Version="3.7.0.32" />
-    <PackageReference Include="AWSSDK.Lambda" Version="3.7.0.32" />
-    <PackageReference Include="AWSSDK.S3" Version="3.7.1.4" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.21" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.2.3" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.7.0.33" />
-    <PackageReference Include="AWSSDK.StepFunctions" Version="3.7.0.32" />
+    <PackageReference Include="AWSSDK.Core" Version="3.7.12.2" />
+    <PackageReference Include="AWSSDK.KinesisFirehose" Version="3.7.2.96" />
+    <PackageReference Include="AWSSDK.Lambda" Version="3.7.13.16" />
+    <PackageReference Include="AWSSDK.S3" Version="3.7.9.18" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.167" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.3.74" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.2.71" />
+    <PackageReference Include="AWSSDK.StepFunctions" Version="3.7.0.174" />
     <PackageReference Include="ClientPolicyLib" Version="1.0.1-build.1568409103-0cf966144" />
     <PackageReference Include="DnsClient" Version="1.4.0" />
     <PackageReference Include="IPNetwork2" Version="2.5.320" />
